@@ -1,0 +1,9 @@
+{
+  "name": "Note Quest",
+  "short_name": "Note Quest",
+  "start_url": "./",
+  "display": "standalone",
+  "background_color": "#fff4e6",
+  "theme_color": "#fff4e6",
+  "icons": [{ "src": "icon.png", "sizes": "512x512", "type": "image/png" }]
+}

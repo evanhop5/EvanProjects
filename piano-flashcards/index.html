@@ -1,0 +1,561 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover, user-scalable=no">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-status-bar-style" content="default">
+<meta name="apple-mobile-web-app-title" content="Note Quest">
+<meta name="theme-color" content="#fff4e6">
+<link rel="apple-touch-icon" href="icon.png">
+<link rel="icon" href="icon.png">
+<link rel="manifest" href="manifest.json">
+<title>Note Quest</title>
+<style>
+  :root {
+    --bg: #fff4e6;
+    --card: #ffffff;
+    --ink: #2b1d16;
+    --soft: #8a6f60;
+    --red: #e8402a;
+    --orange: #ff8a1f;
+    --gold: #ffc22e;
+    --green: #1fae5b;
+    --line: #f0dcc6;
+    --shadow: 0 4px 0 rgba(120, 60, 20, .18);
+  }
+  * { box-sizing: border-box; -webkit-tap-highlight-color: transparent; }
+  html, body { margin: 0; height: 100%; }
+  body {
+    background: var(--bg);
+    color: var(--ink);
+    font-family: ui-rounded, "SF Pro Rounded", system-ui, -apple-system, "Segoe UI", sans-serif;
+    -webkit-user-select: none; user-select: none;
+    touch-action: manipulation;
+    overflow-x: hidden;
+  }
+  button { font: inherit; color: inherit; cursor: pointer; touch-action: manipulation; }
+  .screen {
+    display: none;
+    flex-direction: column;
+    min-height: 100dvh;
+    max-width: 560px;
+    margin: 0 auto;
+    padding: calc(env(safe-area-inset-top) + 14px) 16px calc(env(safe-area-inset-bottom) + 16px);
+  }
+  .screen.on { display: flex; }
+
+  /* ---------- Home ---------- */
+  .brand { display: flex; align-items: center; justify-content: space-between; }
+  .brand h1 { margin: 0; font-size: 30px; font-weight: 900; letter-spacing: -.5px; }
+  .brand h1 span { color: var(--red); }
+  .icon-btn {
+    width: 44px; height: 44px; border-radius: 14px; border: 0;
+    background: var(--card); box-shadow: var(--shadow); font-size: 20px;
+  }
+  .rank {
+    margin-top: 14px; background: linear-gradient(135deg, var(--red), var(--orange));
+    color: #fff; border-radius: 22px; padding: 16px 18px; box-shadow: var(--shadow);
+  }
+  .rank-top { display: flex; justify-content: space-between; align-items: baseline; gap: 8px; }
+  .rank-name { font-size: 22px; font-weight: 800; }
+  .rank-pts { font-size: 15px; font-weight: 700; opacity: .95; white-space: nowrap; }
+  .bar { height: 12px; background: rgba(255,255,255,.3); border-radius: 99px; margin: 10px 0 6px; overflow: hidden; }
+  .bar i { display: block; height: 100%; width: 0; background: var(--gold); border-radius: 99px; transition: width .6s; }
+  .rank-sub { font-size: 13px; opacity: .95; display: flex; justify-content: space-between; gap: 8px; }
+
+  .modes { display: grid; grid-template-columns: 1fr 1fr; gap: 12px; margin-top: 16px; }
+  .mode {
+    border: 0; background: var(--card); border-radius: 20px; padding: 14px 10px 12px;
+    box-shadow: var(--shadow); text-align: center; display: flex; flex-direction: column;
+    align-items: center; gap: 4px; transition: transform .08s;
+  }
+  .mode:active, .choice:active, .big:active, .icon-btn:active { transform: translateY(3px); box-shadow: 0 1px 0 rgba(120,60,20,.18); }
+  .mode .em { font-size: 34px; line-height: 1.1; }
+  .mode .t { font-size: 17px; font-weight: 800; }
+  .mode .d { font-size: 12px; color: var(--soft); }
+  .mode .s { font-size: 16px; letter-spacing: 2px; color: var(--gold); }
+  .mode .s .off { color: #e6d6c5; }
+  .foot { margin-top: auto; padding-top: 18px; text-align: center; }
+  .link { background: none; border: 0; color: var(--soft); font-size: 13px; text-decoration: underline; padding: 8px; }
+
+  /* ---------- Game ---------- */
+  .top { display: flex; align-items: center; gap: 10px; }
+  .dots { flex: 1; display: flex; gap: 5px; }
+  .dots i { flex: 1; height: 10px; border-radius: 99px; background: var(--line); }
+  .dots i.ok { background: var(--green); }
+  .dots i.no { background: var(--red); }
+  .dots i.now { background: var(--gold); }
+  .hud { display: flex; justify-content: space-between; align-items: center; margin: 12px 2px 0; font-weight: 800; }
+  .hud .pts { font-size: 18px; }
+  .hud .streak { font-size: 18px; color: var(--red); min-height: 24px; }
+  .prompt { text-align: center; font-size: 22px; font-weight: 800; margin: 10px 0 8px; }
+  .card {
+    background: var(--card); border-radius: 24px; box-shadow: var(--shadow);
+    padding: 10px; display: flex; align-items: center; justify-content: center;
+    min-height: 190px; position: relative;
+  }
+  .card svg { width: 100%; height: auto; max-height: 34vh; display: block; }
+  .card.pop { animation: pop .35s; }
+  .card.shake { animation: shake .4s; }
+  @keyframes pop { 50% { transform: scale(1.04); } }
+  @keyframes shake { 20%,60% { transform: translateX(-8px); } 40%,80% { transform: translateX(8px); } }
+  .feedback { text-align: center; font-size: 20px; font-weight: 800; min-height: 56px; display: flex; align-items: center; justify-content: center; padding: 4px 0; }
+  .feedback.good { color: var(--green); }
+  .feedback.bad { color: var(--red); }
+
+  .choices { display: grid; gap: 10px; margin-top: auto; }
+  .choices.keys { grid-template-columns: repeat(7, 1fr); gap: 5px; }
+  .choices.two { grid-template-columns: 1fr 1fr; }
+  .choices.three { grid-template-columns: 1fr 1fr 1fr; }
+  .choices.list { grid-template-columns: 1fr; }
+  .choice {
+    border: 0; background: var(--card); border-radius: 18px; box-shadow: var(--shadow);
+    min-height: 64px; font-size: 20px; font-weight: 800; padding: 10px 8px;
+  }
+  .choices.list .choice { font-size: 18px; min-height: 56px; }
+  .choices.keys .choice {
+    min-height: 120px; border-radius: 6px 6px 14px 14px; font-size: 26px;
+    display: flex; align-items: flex-end; justify-content: center; padding-bottom: 14px;
+    border: 2px solid #e9d9c8;
+  }
+  .choice.right { background: var(--green); color: #fff; border-color: var(--green) !important; }
+  .choice.wrong { background: var(--red); color: #fff; border-color: var(--red) !important; animation: shake .4s; }
+  .choice.hint { animation: glow 1s infinite; }
+  @keyframes glow { 50% { box-shadow: 0 0 0 5px rgba(31,174,91,.35); } }
+  .big {
+    border: 0; border-radius: 20px; min-height: 60px; font-size: 21px; font-weight: 800;
+    background: var(--red); color: #fff; box-shadow: var(--shadow); width: 100%;
+  }
+  .big.alt { background: var(--card); color: var(--ink); }
+  .next-wrap { margin-top: 10px; display: none; }
+  .next-wrap.on { display: block; }
+
+  /* ---------- Done ---------- */
+  #done { text-align: center; justify-content: center; gap: 10px; }
+  #done h2 { font-size: 32px; margin: 0; }
+  .stars { font-size: 64px; letter-spacing: 6px; }
+  .stars span { display: inline-block; color: #e6d6c5; }
+  .stars span.lit { color: var(--gold); animation: starIn .5s both; }
+  .stars span:nth-child(2) { animation-delay: .25s; }
+  .stars span:nth-child(3) { animation-delay: .5s; }
+  @keyframes starIn { 0% { transform: scale(0) rotate(-90deg); } 70% { transform: scale(1.3); } 100% { transform: scale(1); } }
+  .result { font-size: 22px; font-weight: 800; }
+  .earned { font-size: 18px; color: var(--soft); font-weight: 700; }
+  .levelup { background: var(--gold); border-radius: 18px; padding: 12px; font-weight: 800; font-size: 18px; }
+  .done-btns { display: grid; gap: 10px; margin-top: 18px; }
+
+  .confetti { position: fixed; top: -20px; width: 10px; height: 14px; border-radius: 2px; pointer-events: none; z-index: 9; animation: fall linear forwards; }
+  @keyframes fall { to { transform: translateY(110vh) rotate(720deg); } }
+</style>
+</head>
+<body>
+
+<!-- HOME -->
+<section id="home" class="screen on">
+  <div class="brand">
+    <h1>🎹 Note <span>Quest</span></h1>
+    <button class="icon-btn" id="soundBtn" aria-label="Sound on or off">🔊</button>
+  </div>
+  <div class="rank">
+    <div class="rank-top">
+      <div class="rank-name" id="rankName">Beginner</div>
+      <div class="rank-pts" id="rankPts">0 pts</div>
+    </div>
+    <div class="bar"><i id="rankBar"></i></div>
+    <div class="rank-sub"><span id="rankNext"></span><span id="dayStreak"></span></div>
+  </div>
+  <div class="modes" id="modes"></div>
+  <div class="foot">
+    <button class="link" id="resetBtn">Reset scores</button>
+  </div>
+</section>
+
+<!-- GAME -->
+<section id="game" class="screen">
+  <div class="top">
+    <button class="icon-btn" id="quitBtn" aria-label="Back to home">✕</button>
+    <div class="dots" id="dots"></div>
+  </div>
+  <div class="hud"><span class="pts" id="roundPts">0 pts</span><span class="streak" id="streak"></span></div>
+  <div class="prompt" id="prompt"></div>
+  <div class="card" id="card"></div>
+  <div class="feedback" id="feedback"></div>
+  <div class="choices" id="choices"></div>
+  <div class="next-wrap" id="nextWrap"><button class="big" id="nextBtn">Got it! Next ➜</button></div>
+</section>
+
+<!-- DONE -->
+<section id="done" class="screen">
+  <h2 id="doneTitle">Great job!</h2>
+  <div class="stars" id="stars"><span>★</span><span>★</span><span>★</span></div>
+  <div class="result" id="doneResult"></div>
+  <div class="earned" id="doneEarned"></div>
+  <div class="levelup" id="levelUp" hidden></div>
+  <div class="done-btns">
+    <button class="big" id="againBtn">Play again 🔁</button>
+    <button class="big alt" id="homeBtn">Home 🏠</button>
+  </div>
+</section>
+
+<script>
+/* ===== Music glyph outlines (from the open-source Noto Music font, OFL) ===== */
+const GLYPHS = {"treble": "M314 801Q300 854 291 906Q282 958 282 1012Q282 1059 288 1100Q295 1142 307 1177Q320 1217 341 1252Q362 1288 386 1311Q409 1334 427 1334Q451 1334 493 1249Q514 1206 524 1156Q534 1106 534 1049Q534 978 515 908Q496 837 460 775Q423 713 372 666L407 498Q422 500 432 501Q442 502 447 502Q508 502 556 468Q604 433 632 377Q661 321 661 254Q661 177 622 116Q582 54 503 25Q508 8 532 -117Q538 -147 541 -164Q544 -182 545 -195Q546 -208 546 -225Q546 -275 522 -314Q497 -354 456 -376Q414 -398 363 -398Q311 -398 271 -378Q231 -359 208 -324Q185 -290 185 -245Q185 -197 212 -165Q238 -133 287 -133Q329 -133 356 -164Q382 -194 382 -236Q382 -272 357 -299Q332 -326 292 -326H282Q308 -365 364 -365Q433 -365 472 -320Q511 -275 511 -205Q511 -188 507 -160Q503 -131 493 -91Q483 -51 478 -25Q472 1 470 12Q436 2 390 2Q304 2 222 52Q142 102 96 184Q50 266 50 361Q50 451 91 530Q132 609 192 675Q253 741 314 801ZM341 826Q364 838 390 870Q416 903 440 945Q464 987 479 1030Q494 1072 494 1106Q494 1142 483 1163Q472 1184 445 1184Q421 1184 398 1162Q376 1140 358 1104Q341 1067 331 1022Q321 977 321 930Q321 898 328 872Q334 846 341 826ZM495 55Q593 97 593 227Q593 270 571 306Q549 341 512 362Q475 383 429 383ZM398 379Q371 373 347 354Q323 334 308 306Q294 279 294 248Q294 223 307 196Q320 170 339 154Q352 142 365 136Q380 129 380 123Q380 120 370 117Q332 126 302 151Q271 176 254 212Q236 247 236 287Q236 330 254 370Q271 410 302 442Q334 474 374 490L345 641Q229 547 174 456Q120 366 120 277Q120 212 154 156Q188 100 247 66Q306 31 380 31Q400 31 420 35Q441 39 464 45Z", "bass": "M50 123Q216 231 288 301Q336 348 373 408Q410 469 432 536Q453 603 453 669Q453 728 435 774Q417 819 383 845Q349 871 302 871Q284 871 264 867Q245 863 224 855Q181 839 158 814Q135 788 135 765Q135 756 143 752Q151 748 158 748Q168 748 183 752Q190 754 196 755Q203 756 210 756Q248 756 272 734Q296 711 296 674Q296 638 266 612Q236 586 195 586Q146 586 111 617Q76 648 76 697Q76 756 109 802Q142 848 198 874Q255 900 324 900Q400 900 460 867Q520 834 556 776Q591 719 591 646Q591 551 538 464Q511 419 476 379Q442 339 389 298Q336 256 256 208Q176 160 57 101ZM687 809Q710 809 726 793Q742 777 742 754Q742 731 726 716Q710 700 687 700Q664 700 648 716Q632 731 632 754Q632 777 648 793Q664 809 687 809ZM687 589Q710 589 726 573Q742 557 742 534Q742 511 726 496Q710 480 687 480Q664 480 648 496Q632 511 632 534Q632 557 648 573Q664 589 687 589Z", "qrest": "M147 878 307 683Q257 624 230 581Q203 538 203 494Q203 457 227 416Q251 376 303 314L287 292Q243 320 205 320Q177 320 163 302Q149 283 149 257Q149 225 162 196Q176 168 199 142L186 123Q117 173 84 214Q51 255 51 303Q51 346 78 366Q105 386 143 386Q173 386 221 363V365L67 570Q168 659 168 736Q168 797 104 878Z", "p": "M3 483H-25Q13 565 48 600Q83 634 127 634Q153 634 166 624Q178 613 180 597Q191 608 212 621Q233 634 262 634Q307 634 328 604Q348 575 348 530Q348 486 326 444Q304 403 268 376Q233 350 192 350Q172 350 154 358Q137 366 126 386L80 255Q75 242 75 234Q75 225 92 225H135V194H-87V225H-47Q-28 225 -21 232Q-14 239 -7 257L102 559Q108 576 108 583Q108 596 97 596Q82 596 60 573Q38 550 19 513ZM147 421Q147 382 171 382Q187 382 203 403Q219 424 233 454Q247 485 256 516Q264 547 264 567Q264 600 241 600Q222 600 204 583Q187 566 174 538Q162 511 154 480Q147 449 147 421Z", "m": "M18 366 88 561Q92 572 92 583Q92 595 83 595Q66 595 42 565Q19 536 2 483H-26Q3 566 40 600Q77 634 120 634Q140 634 152 625Q163 616 163 595Q177 612 198 623Q219 634 245 634Q264 634 278 624Q293 615 293 595Q310 617 333 626Q356 634 372 634Q393 634 406 626Q420 618 420 598Q420 591 418 581Q416 571 414 567L370 435Q367 426 364 417Q362 408 362 400Q362 385 374 385Q387 385 405 411Q414 424 424 441Q434 458 444 480L468 470Q441 409 414 380Q386 350 344 350Q316 350 300 362Q284 375 284 400Q284 414 290 436Q296 457 300 467L334 562Q339 577 339 581Q339 595 326 595Q314 595 305 582Q296 569 285 539L220 366H139L213 567Q215 577 215 581Q215 595 202 595Q183 595 172 564L100 366Z", "f": "M110 619Q128 664 159 701Q190 738 228 760Q267 781 307 781Q348 781 364 762Q381 744 381 717Q381 694 365 675Q349 656 329 656Q292 656 292 692Q292 700 295 708Q298 717 308 724Q317 731 328 736Q339 740 339 742Q339 745 331 748Q327 750 322 751Q317 752 312 752Q278 752 250 720Q222 688 205 619H292V586H196Q171 489 142 416Q113 342 78 294Q9 197 -63 197Q-99 197 -117 218Q-135 239 -135 268Q-135 300 -120 316Q-105 332 -82 332Q-62 332 -50 320Q-39 307 -39 289Q-39 280 -41 273Q-43 266 -50 258Q-57 251 -63 246Q-69 241 -74 238Q-78 236 -78 231Q-78 226 -63 226Q-32 226 -8 264Q4 283 17 314Q30 346 40 384L74 504Q90 564 99 586H31V619Z"};
+
+/* ===== Settings ===== */
+const ROUND = 10;
+const LETTERS = ['C', 'D', 'E', 'F', 'G', 'A', 'B'];
+const SEMI = [0, 2, 4, 5, 7, 9, 11];
+const RANKS = [
+  [0, 'Beginner 🌱'], [150, 'Note Explorer 🧭'], [400, 'Rhythm Rocker 🎸'],
+  [800, 'Staff Star ⭐'], [1500, 'Keyboard Hero 🦸'], [2500, 'Piano Pro 🏆'],
+  [4000, 'Music Master 👑'], [6000, 'Grand Legend 🐉']
+];
+const CHEERS = ['Great!', 'Awesome!', 'You got it!', 'Nice!', 'Super!', 'Yes!', 'Perfect!', 'Way to go!'];
+const LANDMARK = { 21: 'Bass C', 24: 'Bass F', 28: 'Middle C', 32: 'Treble G' };
+
+/* ===== Saved progress (stays on this phone) ===== */
+const KEY = 'noteQuest.v1';
+function load() {
+  try { return Object.assign(fresh(), JSON.parse(localStorage.getItem(KEY)) || {}); }
+  catch (e) { return fresh(); }
+}
+function fresh() { return { points: 0, best: {}, correct: 0, lastDay: '', days: 0, sound: true }; }
+function save() { try { localStorage.setItem(KEY, JSON.stringify(S)); } catch (e) {} }
+let S = load();
+
+/* ===== Helpers ===== */
+const $ = id => document.getElementById(id);
+const pick = a => a[Math.floor(Math.random() * a.length)];
+const shuffle = a => { a = a.slice(); for (let i = a.length - 1; i > 0; i--) { const j = Math.floor(Math.random() * (i + 1)); [a[i], a[j]] = [a[j], a[i]]; } return a; };
+const letterOf = dn => LETTERS[((dn % 7) + 7) % 7];
+const midiOf = dn => 12 * (Math.floor(dn / 7) + 1) + SEMI[((dn % 7) + 7) % 7];
+const dayStr = d => d.getFullYear() + '-' + (d.getMonth() + 1) + '-' + d.getDate();
+
+/* ===== Sound (Web Audio, simple piano-ish tone) ===== */
+let actx = null;
+function ac() {
+  if (!actx) { const C = window.AudioContext || window.webkitAudioContext; if (!C) return null; actx = new C(); }
+  if (actx.state === 'suspended') actx.resume();
+  return actx;
+}
+function tone(midi, when = 0, dur = 1.1, vol = 0.32) {
+  if (!S.sound) return;
+  const c = ac(); if (!c) return;
+  const t = c.currentTime + when + 0.02, f = 440 * Math.pow(2, (midi - 69) / 12);
+  const g = c.createGain();
+  g.gain.setValueAtTime(0.0001, t);
+  g.gain.exponentialRampToValueAtTime(vol, t + 0.012);
+  g.gain.exponentialRampToValueAtTime(vol * 0.35, t + 0.25);
+  g.gain.exponentialRampToValueAtTime(0.0001, t + dur);
+  g.connect(c.destination);
+  [[1, 1], [2, 0.45], [3, 0.18], [4, 0.1], [5, 0.04]].forEach(([h, a]) => {
+    const o = c.createOscillator(), og = c.createGain();
+    o.type = 'sine'; o.frequency.value = f * h; og.gain.value = a;
+    o.connect(og); og.connect(g); o.start(t); o.stop(t + dur + 0.05);
+  });
+}
+function tick(when, accent) {
+  if (!S.sound) return;
+  const c = ac(); if (!c) return;
+  const t = c.currentTime + when + 0.02, o = c.createOscillator(), g = c.createGain();
+  o.type = 'square'; o.frequency.value = accent ? 1600 : 1100;
+  g.gain.setValueAtTime(0.08, t); g.gain.exponentialRampToValueAtTime(0.0001, t + 0.05);
+  o.connect(g); g.connect(c.destination); o.start(t); o.stop(t + 0.06);
+}
+const yay = () => [60, 64, 67, 72].forEach((m, i) => tone(m, i * 0.09, 0.6, 0.22));
+const oops = () => { tone(43, 0, 0.35, 0.2); tone(42, 0.12, 0.45, 0.2); };
+const fanfare = () => [60, 64, 67, 72, 67, 72, 76, 79].forEach((m, i) => tone(m, i * 0.11, 0.7, 0.2));
+
+/* ===== Drawing (SVG) ===== */
+const SP = 16, BOT = 100, ACC = '#e8402a';                // staff space, bottom-line y
+const lineY = i => BOT - i * SP;                           // staff line 0..4 (bottom to top)
+const posY = p => BOT - p * SP / 2;                        // p = steps above bottom line
+const FS = SP / 244;                                       // font staff space is 244 units
+function glyph(name, x, color = '#000', scale = 1) {
+  const s = FS * scale;
+  return `<path fill="${color}" transform="translate(${x},${BOT + 12 * s}) scale(${s},${-s})" d="${GLYPHS[name]}"/>`;
+}
+function staff(w, inner, clef = 'treble', clefColor = '#000') {
+  let s = `<svg viewBox="0 0 ${w} 140" xmlns="http://www.w3.org/2000/svg">`;
+  for (let i = 0; i < 5; i++) s += `<line x1="6" x2="${w - 6}" y1="${lineY(i)}" y2="${lineY(i)}" stroke="#000" stroke-width="1.4"/>`;
+  s += `<line x1="6" x2="6" y1="${lineY(4)}" y2="${lineY(0)}" stroke="#000" stroke-width="1.4"/>`;
+  if (clef) s += glyph(clef, 12, clefColor);
+  return s + inner + '</svg>';
+}
+// Note head + stem. kind: 'q' quarter, 'h' half, 'dh' dotted half, 'w' whole
+function note(x, p, kind = 'q', color = '#000') {
+  const y = posY(p), rx = SP * 0.66, ry = SP * 0.47;
+  let s = '';
+  // ledger lines
+  for (let l = -2; l >= p; l -= 2) s += `<line x1="${x - rx - 6}" x2="${x + rx + 6}" y1="${posY(l)}" y2="${posY(l)}" stroke="#000" stroke-width="1.4"/>`;
+  for (let l = 10; l <= p; l += 2) s += `<line x1="${x - rx - 6}" x2="${x + rx + 6}" y1="${posY(l)}" y2="${posY(l)}" stroke="#000" stroke-width="1.4"/>`;
+  const filled = kind === 'q';
+  s += `<g transform="rotate(-20 ${x} ${y})">
+          <ellipse cx="${x}" cy="${y}" rx="${rx}" ry="${ry}" fill="${color}"/>
+          ${filled ? '' : `<ellipse cx="${x}" cy="${y}" rx="${rx * (kind === 'w' ? .5 : .62)}" ry="${ry * (kind === 'w' ? .62 : .42)}" fill="#fff" ${kind === 'w' ? `transform="rotate(${-40} ${x} ${y})"` : ''}/>`}
+        </g>`;
+  if (kind !== 'w') {
+    const up = p < 4, sx = up ? x + rx - 1.2 : x - rx + 1.2, sy2 = up ? y - SP * 3.5 : y + SP * 3.5;
+    s += `<line x1="${sx}" x2="${sx}" y1="${y + (up ? -2 : 2)}" y2="${sy2}" stroke="${color}" stroke-width="2"/>`;
+  }
+  if (kind === 'dh') s += `<circle cx="${x + rx + 8}" cy="${p % 2 === 0 ? y - SP / 2 : y}" r="3" fill="${color}"/>`;
+  return s;
+}
+function keyboard(hiIdx) {
+  const W = 24, N = 14, H = 130;
+  let s = `<svg viewBox="-2 -2 ${N * W + 4} ${H + 4}" xmlns="http://www.w3.org/2000/svg">`;
+  for (let i = 0; i < N; i++) {
+    const hi = i === hiIdx;
+    s += `<rect x="${i * W}" y="0" width="${W}" height="${H}" rx="4" fill="${hi ? '#ffd27a' : '#fff'}" stroke="#2b1d16" stroke-width="1.5"/>`;
+    if (hi) s += `<text x="${i * W + W / 2}" y="${H - 14}" text-anchor="middle" font-size="18">⭐</text>`;
+  }
+  for (let i = 0; i < N; i++) {
+    if ([0, 1, 3, 4, 5].includes(i % 7) && i < N - 1) s += `<rect x="${(i + 1) * W - 7.5}" y="0" width="15" height="80" rx="2.5" fill="#1d1410"/>`;
+  }
+  return s + `<rect x="0" y="0" width="${N * W}" height="5" fill="#c0392b"/></svg>`;
+}
+function dynamicSVG(parts) {               // parts like ['m','f']
+  const ADV = { m: 440, f: 300, p: 380 }, MIN = { m: -26, f: -135, p: -87 }, MAX = { m: 468, f: 381, p: 348 };
+  let x = 0, g = '', lo = 1e9, hi = -1e9;
+  parts.forEach(k => { g += `<path transform="translate(${x},0)" d="${GLYPHS[k]}"/>`; lo = Math.min(lo, x + MIN[k]); hi = Math.max(hi, x + MAX[k]); x += ADV[k]; });
+  const pad = 260;
+  return `<svg viewBox="${lo - pad} -840 ${hi - lo + 2 * pad} 700" xmlns="http://www.w3.org/2000/svg" style="max-height:24vh"><g transform="scale(1,-1)" fill="${ACC}">${g}</g></svg>`;
+}
+
+/* ===== Card makers ===== */
+function noteCard(clef, pool) {
+  const dn = pick(pool);
+  const base = clef === 'treble' ? 30 : 18;           // bottom line: E4 (treble) / G2 (bass)
+  const L = letterOf(dn);
+  return {
+    key: dn, answer: L, type: 'keys',
+    svg: staff(230, note(150, dn - base, 'q'), clef),
+    sound: () => tone(midiOf(dn)),
+    explain: LANDMARK[dn] ? `That's ${LANDMARK[dn]}! 🎯` : `That's ${L}!`
+  };
+}
+const RHYTHM = [
+  { k: 'w', beats: 4, name: 'Whole note' }, { k: 'dh', beats: 3, name: 'Dotted half note' },
+  { k: 'h', beats: 2, name: 'Half note' }, { k: 'q', beats: 1, name: 'Quarter note' },
+  { k: 'wr', beats: 4, name: 'Whole rest' }, { k: 'hr', beats: 2, name: 'Half rest' },
+  { k: 'qr', beats: 1, name: 'Quarter rest' }
+];
+function rhythmCard() {
+  const r = pick(RHYTHM), x = 140;
+  let inner;
+  if (r.k === 'wr') inner = `<rect x="${x - 11}" y="${lineY(3)}" width="22" height="${SP * .55}" fill="${ACC}"/>`;
+  else if (r.k === 'hr') inner = `<rect x="${x - 11}" y="${lineY(2) - SP * .55}" width="22" height="${SP * .55}" fill="${ACC}"/>`;
+  else if (r.k === 'qr') inner = glyph('qrest', x - 6, ACC);
+  else inner = note(x, 5, r.k, ACC);
+  const isRest = r.k.endsWith('r');
+  return {
+    key: r.k, answer: String(r.beats), type: 'beats',
+    svg: staff(230, inner, 'treble'),
+    sound: () => {
+      for (let b = 0; b < r.beats; b++) tick(b * 0.5, b === 0);
+      if (!isRest) tone(71, 0, r.beats * 0.5 + 0.2, 0.25);
+    },
+    explain: `${r.name} = ${r.beats} beat${r.beats > 1 ? 's' : ''}`
+  };
+}
+function intervalCard() {
+  let a, b, kind;
+  do {
+    a = 28 + Math.floor(Math.random() * 5);             // C4..G4
+    kind = pick(['Step', 'Skip', 'Repeat', 'Step', 'Skip']);
+    const d = kind === 'Repeat' ? 0 : kind === 'Step' ? 1 : 2;
+    b = a + (Math.random() < .5 ? d : -d);
+  } while (b < 28 || b > 32);
+  return {
+    key: a + '-' + b, answer: kind, type: 'interval',
+    svg: staff(260, note(130, a - 30, 'q') + note(205, b - 30, 'q'), 'treble'),
+    sound: () => { tone(midiOf(a), 0, 0.6); tone(midiOf(b), 0.45, 0.9); },
+    explain: kind === 'Step' ? 'A step goes to the very next note (line → space)' :
+             kind === 'Skip' ? 'A skip jumps over one note (line → line)' : 'A repeat is the same note again'
+  };
+}
+function keyCard() {
+  const i = Math.floor(Math.random() * 14), dn = 21 + i, L = letterOf(dn);
+  return {
+    key: i, answer: L, type: 'keys', svg: keyboard(i),
+    sound: () => tone(midiOf(dn)),
+    explain: L === 'C' ? `That's C — just left of the 2 black keys!` :
+             L === 'F' ? `That's F — just left of the 3 black keys!` : `That's ${L}!`
+  };
+}
+// Music signs: draw the target in color
+const bars = (xs) => xs.map(x => `<line x1="${x}" x2="${x}" y1="${lineY(4)}" y2="${lineY(0)}" stroke="#000" stroke-width="1.6"/>`).join('');
+const timeSig = (top, bot, color) =>
+  `<g font-family="Georgia, 'Times New Roman', serif" font-weight="900" font-size="38" text-anchor="middle" fill="${color}">
+     <text x="74" y="${lineY(3) + 13}">${top}</text><text x="74" y="${lineY(1) + 13}">${bot}</text></g>`;
+const SIGNS = [
+  { id: 'treble', g: 'clef', label: 'Treble clef', svg: () => staff(230, note(130, 2) + note(175, 4), 'treble', ACC) },
+  { id: 'bass', g: 'clef', label: 'Bass clef', svg: () => staff(230, note(130, 3) + note(175, 5), 'bass', ACC) },
+  { id: 'bar', g: 'line', label: 'Bar line', svg: () => staff(260, note(90, 2) + note(125, 3) + `<line x1="155" x2="155" y1="${lineY(4)}" y2="${lineY(0)}" stroke="${ACC}" stroke-width="3"/>` + note(185, 4) + note(220, 3) + bars([254]), 'treble') },
+  { id: 'double', g: 'line', label: 'Double bar line (the end)', svg: () => staff(240, note(95, 2) + note(135, 1) + note(175, 0, 'h') + `<line x1="216" x2="216" y1="${lineY(4)}" y2="${lineY(0)}" stroke="${ACC}" stroke-width="2"/><rect x="223" y="${lineY(4)}" width="6" height="${SP * 4}" fill="${ACC}"/>`, 'treble') },
+  { id: 'repeat', g: 'line', label: 'Repeat sign (play it again)', svg: () => staff(240, note(95, 2) + note(135, 3) + note(175, 4, 'h') + `<circle cx="205" cy="${posY(3)}" r="3.4" fill="${ACC}"/><circle cx="205" cy="${posY(5)}" r="3.4" fill="${ACC}"/><line x1="214" x2="214" y1="${lineY(4)}" y2="${lineY(0)}" stroke="${ACC}" stroke-width="2"/><rect x="221" y="${lineY(4)}" width="6" height="${SP * 4}" fill="${ACC}"/>`, 'treble') },
+  { id: 't44', g: 'time', label: '4 beats in each measure', svg: () => staff(230, timeSig(4, 4, ACC) + note(130, 2) + note(165, 3) + note(200, 4), 'treble') },
+  { id: 't34', g: 'time', label: '3 beats in each measure', svg: () => staff(230, timeSig(3, 4, ACC) + note(130, 2) + note(170, 3, 'h'), 'treble') },
+  { id: 'p', g: 'dyn', label: 'piano = soft', svg: () => dynamicSVG(['p']) },
+  { id: 'f', g: 'dyn', label: 'forte = loud', svg: () => dynamicSVG(['f']) },
+  { id: 'mf', g: 'dyn', label: 'mezzo forte = medium loud', svg: () => dynamicSVG(['m', 'f']) },
+  { id: 'mp', g: 'dyn', label: 'mezzo piano = medium soft', svg: () => dynamicSVG(['m', 'p']) }
+];
+function signCard() {
+  const s = pick(SIGNS);
+  const same = shuffle(SIGNS.filter(o => o.g === s.g && o !== s));
+  const other = shuffle(SIGNS.filter(o => o.g !== s.g));
+  const opts = shuffle([s, ...same.concat(other).slice(0, 3)]).map(o => o.label);
+  return {
+    key: s.id, answer: s.label, type: 'list', options: opts,
+    svg: s.svg(), sound: yay, explain: `It means: ${s.label}`
+  };
+}
+
+/* ===== Modes ===== */
+const MODES = [
+  { id: 'treble', em: '🎼', t: 'Treble Notes', d: 'Right hand C – G', prompt: 'What note is this?', make: () => noteCard('treble', [28, 29, 30, 31, 32]) },
+  { id: 'bass', em: '🎵', t: 'Bass Notes', d: 'Left hand C – G', prompt: 'What note is this?', make: () => noteCard('bass', [21, 22, 23, 24, 25, 28]) },
+  { id: 'keys', em: '🎹', t: 'Piano Keys', d: 'Find the ⭐ key', prompt: 'Which key has the ⭐?', make: keyCard },
+  { id: 'rhythm', em: '🥁', t: 'Rhythm', d: 'Notes & rests', prompt: 'How many beats?', make: rhythmCard },
+  { id: 'interval', em: '🦘', t: 'Steps & Skips', d: 'How far did it move?', prompt: 'Step, skip, or repeat?', make: intervalCard },
+  { id: 'signs', em: '✨', t: 'Music Signs', d: 'Clefs, bars & dynamics', prompt: 'What is the red sign?', make: signCard }
+];
+
+/* ===== Home screen ===== */
+function rankInfo(pts) {
+  let i = 0; while (i + 1 < RANKS.length && pts >= RANKS[i + 1][0]) i++;
+  const cur = RANKS[i], nxt = RANKS[i + 1];
+  return { i, name: cur[1], next: nxt, pct: nxt ? (pts - cur[0]) / (nxt[0] - cur[0]) * 100 : 100 };
+}
+function starsHTML(n) { return [0, 1, 2].map(i => `<span class="${i < n ? '' : 'off'}">★</span>`).join(''); }
+function renderHome() {
+  const r = rankInfo(S.points);
+  $('rankName').textContent = r.name;
+  $('rankPts').textContent = S.points.toLocaleString() + ' pts';
+  $('rankBar').style.width = r.pct + '%';
+  $('rankNext').textContent = r.next ? `${(r.next[0] - S.points).toLocaleString()} pts to ${r.next[1]}` : 'Top rank! 🎉';
+  const today = dayStr(new Date()), y = new Date(); y.setDate(y.getDate() - 1);
+  const alive = S.lastDay === today || S.lastDay === dayStr(y);
+  $('dayStreak').textContent = alive && S.days > 0 ? `🔥 ${S.days} day${S.days > 1 ? 's' : ''}` : '';
+  $('soundBtn').textContent = S.sound ? '🔊' : '🔇';
+  $('modes').innerHTML = MODES.map(m => `
+    <button class="mode" data-mode="${m.id}">
+      <div class="em">${m.em}</div><div class="t">${m.t}</div><div class="d">${m.d}</div>
+      <div class="s">${starsHTML(S.best[m.id] || 0)}</div>
+    </button>`).join('');
+}
+$('modes').addEventListener('click', e => { const b = e.target.closest('.mode'); if (b) { ac(); start(b.dataset.mode); } });
+$('soundBtn').onclick = () => { S.sound = !S.sound; save(); renderHome(); if (S.sound) tone(72, 0, 0.4); };
+$('resetBtn').onclick = () => {
+  if (confirm('Reset all scores and stars? This cannot be undone.')) { const snd = S.sound; S = fresh(); S.sound = snd; save(); renderHome(); }
+};
+
+/* ===== Game ===== */
+let R = null, card = null, locked = false, timer = null;
+function show(id) { document.querySelectorAll('.screen').forEach(s => s.classList.toggle('on', s.id === id)); window.scrollTo(0, 0); }
+function start(modeId) {
+  R = { mode: MODES.find(m => m.id === modeId), i: 0, correct: 0, streak: 0, pts: 0, results: [], last: null };
+  show('game'); next();
+}
+function next() {
+  clearTimeout(timer);
+  if (R.i >= ROUND) return finish();
+  do { card = R.mode.make(); } while (card.key === R.last);
+  R.last = card.key; locked = false;
+  $('prompt').textContent = R.mode.prompt;
+  $('card').innerHTML = card.svg; $('card').className = 'card';
+  $('feedback').textContent = ''; $('feedback').className = 'feedback';
+  $('nextWrap').classList.remove('on');
+  let opts, cls;
+  if (card.type === 'keys') { opts = LETTERS.map(l => [l, l]); cls = 'keys'; }
+  else if (card.type === 'beats') { opts = [1, 2, 3, 4].map(n => [String(n), n + (n > 1 ? ' beats' : ' beat')]); cls = 'two'; }
+  else if (card.type === 'interval') { opts = ['Step', 'Skip', 'Repeat'].map(s => [s, s]); cls = 'three'; }
+  else { opts = card.options.map(o => [o, o]); cls = 'list'; }
+  $('choices').className = 'choices ' + cls;
+  $('choices').innerHTML = opts.map(([v, t]) => `<button class="choice" data-v="${v}">${t}</button>`).join('');
+  hud();
+}
+function hud() {
+  $('dots').innerHTML = Array.from({ length: ROUND }, (_, i) =>
+    `<i class="${R.results[i] === true ? 'ok' : R.results[i] === false ? 'no' : i === R.i ? 'now' : ''}"></i>`).join('');
+  $('roundPts').textContent = R.pts + ' pts';
+  $('streak').textContent = R.streak >= 2 ? '🔥 ' + R.streak : '';
+}
+$('choices').addEventListener('click', e => {
+  const b = e.target.closest('.choice'); if (!b || locked) return;
+  locked = true;
+  const right = b.dataset.v === card.answer;
+  R.results[R.i] = right;
+  if (right) {
+    R.correct++; R.streak++;
+    const gain = 10 + (R.streak >= 3 ? 5 : 0);
+    R.pts += gain;
+    b.classList.add('right'); $('card').classList.add('pop');
+    card.sound();
+    const fb = $('feedback'); fb.className = 'feedback good';
+    fb.textContent = R.streak === 3 ? '🔥 3 in a row! +5 bonus' :
+                     R.streak === 5 ? '🔥🔥 On fire!' :
+                     R.streak === 8 ? '🚀 Unstoppable!' :
+                     (card.type === 'list' || card.type === 'beats' ? pick(CHEERS) + ' ' + card.explain : pick(CHEERS) + ' +' + gain);
+    if (R.streak === 5 || R.streak === 8) confetti(30);
+    R.i++; hud();
+    timer = setTimeout(next, card.type === 'beats' || card.type === 'list' ? 1500 : 950);
+  } else {
+    R.streak = 0;
+    b.classList.add('wrong'); $('card').classList.add('shake');
+    const good = $('choices').querySelector(`[data-v="${CSS.escape(card.answer)}"]`);
+    if (good) good.classList.add('right', 'hint');
+    oops(); setTimeout(() => card.sound(), 450);
+    $('feedback').className = 'feedback bad'; $('feedback').textContent = card.explain;
+    R.i++; hud();
+    $('nextWrap').classList.add('on');
+  }
+});
+$('nextBtn').onclick = next;
+$('quitBtn').onclick = () => { clearTimeout(timer); renderHome(); show('home'); };
+
+function finish() {
+  const stars = R.correct === ROUND ? 3 : R.correct >= 8 ? 2 : R.correct >= 5 ? 1 : 0;
+  let pts = R.pts + (R.correct === ROUND ? 50 : 0);
+  const before = rankInfo(S.points);
+  S.points += pts; S.correct += R.correct;
+  S.best[R.mode.id] = Math.max(S.best[R.mode.id] || 0, stars);
+  const today = dayStr(new Date()), y = new Date(); y.setDate(y.getDate() - 1);
+  if (S.lastDay !== today) { S.days = S.lastDay === dayStr(y) ? S.days + 1 : 1; S.lastDay = today; }
+  save();
+  const after = rankInfo(S.points);
+
+  $('doneTitle').textContent = stars === 3 ? 'PERFECT! 🏆' : stars === 2 ? 'Awesome job! 🎉' : stars === 1 ? 'Good work! 👍' : 'Nice try! 💪';
+  $('stars').innerHTML = [0, 1, 2].map(i => `<span class="${i < stars ? 'lit' : ''}">★</span>`).join('');
+  $('doneResult').textContent = `${R.correct} out of ${ROUND} right`;
+  $('doneEarned').textContent = `+${pts} points` + (R.correct === ROUND ? ' (includes +50 perfect bonus!)' : '') +
+    (stars === 0 ? ' — get 5 right to earn a star!' : '');
+  const lu = $('levelUp');
+  if (after.i > before.i) { lu.hidden = false; lu.textContent = `New rank: ${after.name}!`; } else lu.hidden = true;
+  show('done');
+  if (stars >= 2 || after.i > before.i) { fanfare(); confetti(stars === 3 ? 90 : 50); } else if (stars === 1) yay();
+}
+$('againBtn').onclick = () => start(R.mode.id);
+$('homeBtn').onclick = () => { renderHome(); show('home'); };
+
+function confetti(n) {
+  const colors = ['#e8402a', '#ff8a1f', '#ffc22e', '#1fae5b', '#3b82f6', '#a855f7'];
+  for (let i = 0; i < n; i++) {
+    const c = document.createElement('div');
+    c.className = 'confetti';
+    c.style.left = Math.random() * 100 + 'vw';
+    c.style.background = pick(colors);
+    c.style.animationDuration = 1.6 + Math.random() * 1.6 + 's';
+    c.style.animationDelay = Math.random() * 0.4 + 's';
+    document.body.appendChild(c);
+    setTimeout(() => c.remove(), 3800);
+  }
+}
+
+renderHome();
+</script>
+</body>
+</html>
